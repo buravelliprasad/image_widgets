@@ -1,4 +1,4 @@
-pip install jq
+-pip install jq
 from pydantic import BaseModel, Field
 import os 
 from langchain import OpenAI

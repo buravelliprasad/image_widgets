@@ -63,6 +63,18 @@ from pydantic import BaseModel, Field
 from langchain.tools import tool
 # from datetime import datetime
 from typing import Dict, Any
+from langchain.smith import RunEvalConfig, run_on_dataset
+import pandas as pd
+import json
+from openai import OpenAI
+from langchain.document_loaders import JSONLoader
+from langchain_core.tracers.langchain_v1 import LangChainTracerV1
+import re
+from PIL import Image
+import requests
+from io import BytesIO
+from PIL import Image as pil
+import PIL
 hide_share_button_style = """
     <style>
     .st-emotion-cache-zq5wmm.ezrtsby0 .stActionButton:nth-child(1) {
@@ -155,6 +167,11 @@ tool3 = create_retriever_tool(
     retriever_3, 
      "business_details",
      "Searches and returns documents related to business working days and hours, location and address details."
+)
+tool4 = create_retriever_tool(
+    retriever_4, 
+     "image_details",
+     "Use to search for vehicle information and images based on make and model."
 )
 
 # class CarDetails(BaseModel):
@@ -553,7 +570,7 @@ prompt = OpenAIFunctionsAgent.create_prompt(
     system_message=system_message,
     extra_prompt_messages=[MessagesPlaceholder(variable_name=memory_key)]
 )
-tools = [tool1,tool2,tool3,get_appointment_details,store_appointment_data]
+tools = [tool1,tool2,tool3,tool4,get_appointment_details,store_appointment_data]
 agent = OpenAIFunctionsAgent(llm=llm, tools=tools, prompt=prompt)
 if 'agent_executor' not in st.session_state:
     agent_executor = AgentExecutor(agent=agent, tools=tools, memory=memory, verbose=True, return_source_documents=True,
@@ -598,36 +615,82 @@ def conversational_chat(user_input, user_name):
     
     return output
 output = ""
+vin_numbers = [] 
+is_new_or_used_query = False  
+
 with container:
     if st.session_state.user_name is None:
         user_name = st.text_input("Your name:")
         if user_name:
             st.session_state.user_name = user_name
-
     with st.form(key='my_form', clear_on_submit=True):
         user_input = st.text_input("Query:", placeholder="Type your question here (:")
         submit_button = st.form_submit_button(label='Send')
 
     if submit_button and user_input:
         output = conversational_chat(user_input, st.session_state.user_name)
+        print("output of conversational chat", output)
+
+        
+        is_new_or_used_query = any(keyword in user_input.lower() for keyword in ["new", "used"])
+
+        
+        vin_matches = re.findall(r'VIN: ([^\n]+)', output)
+        if vin_matches:
+            vin_numbers = vin_matches
+
     with response_container:
         for i, (query, answer) in enumerate(st.session_state.chat_history):
+           
             message(query, is_user=True, key=f"{i}_user", avatar_style="thumbs")
-            col1, col2 = st.columns([0.7, 10]) 
+
+           
+            col1, col2 = st.columns([0.7, 10])  
             with col1:
                 st.image("icon-1024.png", width=50)
             with col2:
+               
                 st.markdown(
-                f'<div style="background-color: black; color: white; border-radius: 10px; padding: 10px; width: 60%;'
-                f' border-top-right-radius: 10px; border-bottom-right-radius: 10px;'
-                f' border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 2px 2px 5px #888888;">'
-                f'<span style="font-family: Arial, sans-serif; font-size: 16px; white-space: pre-wrap;">{answer}</span>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
+                    f'<div style="background-color: black; color: white; border-radius: 10px; padding: 10px; width: 85%;'
+                    f' border-top-right-radius: 10px; border-bottom-right-radius: 10px;'
+                    f' border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 2px 2px 5px #888888;">'
+                    f'<span style="font-family: Arial, sans-serif; font-size: 16px; white-space: pre-wrap;">{answer}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
 
-        if st.session_state.user_name:
-            try:
-                save_chat_to_airtable(st.session_state.user_name, user_input, output)
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+               
+                image_links = re.findall(r'(https?://\S+\.(?:png|jpg|jpeg|gif))', answer)
+               
+                for vin_number, image_link in zip(vin_numbers, image_links):
+                    try:
+                        image_response = requests.get(image_link)
+                        image = Image.open(BytesIO(image_response.content))
+                        
+                        
+                        width = 175
+                        height = 135
+                        resized_image = image.resize((width, height))
+                        
+                        
+                        if vin_number and is_new_or_used_query:
+                            inventory_link = f"https://www.goschchevy.com/inventory/{vin_number}" 
+                            st.markdown(
+                                f'<a href="{inventory_link}" target="_blank">'
+                                f'<img src="{image_link}" width="175" height="135" caption="Image"></a>',
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.image(resized_image, caption='2023 Chevrolet Silverado 1500', use_column_width=False)
+                        
+                    except Exception as e:
+                        st.warning(f"Error displaying image: {e}")
+
+        # if st.session_state.user_name:
+        #     try:
+        #         save_chat_to_airtable(st.session_state.user_name, user_input, output)
+        #     except Exception as e:
+        #         st.error(f"An error occurred: {e}")
+
+
+ 

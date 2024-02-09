@@ -18,3 +18,6 @@ langchain-core==0.0.13
 langsmith==0.0.77
 pydantic
 jq
+Pillow==9.5.0
+pydantic==1.10.10
+IPython

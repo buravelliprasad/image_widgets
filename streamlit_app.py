@@ -680,8 +680,8 @@ with container:
                         image = Image.open(BytesIO(image_response.content))
                         
                         
-                        width = 175
-                        height = 135
+                        width = 50
+                        height = 40
                         resized_image = image.resize((width, height))
                         
                         

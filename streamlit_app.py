@@ -646,7 +646,7 @@ def convert_markdown_links_to_html_images(text):
 
     # Replace all occurrences of markdown image links with HTML img tags
     html_text = re.sub(pattern, replace_with_img, text)
-   return html_text
+    return html_text
     
 output = ""
 with container:

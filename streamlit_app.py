@@ -642,11 +642,11 @@ def convert_markdown_links_to_html_images(text):
     def replace_with_img(match):
         alt_text = match.group(1)
         url = match.group(2)
-        return f'<img src="{url}" alt="{alt_text}">'
+        return f'<a href="{url}"><img src="{url}" alt="{alt_text}"/></a>'
 
     # Replace all occurrences of markdown image links with HTML img tags
     html_text = re.sub(pattern, replace_with_img, text)
-   return f'<a href="{url}"><img src="{url}" alt="{alt_text}"/></a>'
+   return html_text
     
 output = ""
 with container:

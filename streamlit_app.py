@@ -635,6 +635,7 @@ def conversational_chat(user_input, user_name):
     
     return output
 def convert_markdown_links_to_html_images(text):
+    print("convert_markdown_links_to_html_images",text)
     # Regular expression to match markdown image format ![alt text](URL)
     pattern = r'\[([^\]]+)\]\(([^)]+)\)'
 

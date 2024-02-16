@@ -649,37 +649,22 @@ def convert_markdown_links_to_html_images(text):
     return html_text
     
 output = ""
-vin_numbers = []  # List to store VINs for each car option
-is_new_or_used_query = False  # Flag to identify if the user queried about new or used cars
-
 with container:
     if st.session_state.user_name is None:
         user_name = st.text_input("Your name:")
         if user_name:
             st.session_state.user_name = user_name
+
     with st.form(key='my_form', clear_on_submit=True):
         user_input = st.text_input("Query:", placeholder="Type your question here (:")
         submit_button = st.form_submit_button(label='Send')
 
     if submit_button and user_input:
         output = conversational_chat(user_input, st.session_state.user_name)
-        print("output of conversational chat", output)
-
-        # Check if the user's query is related to new or used cars
-        is_new_or_used_query = any(keyword in user_input.lower() for keyword in ["new", "used"])
-
-        # Extract VIN numbers from the current response
-        vin_matches = re.findall(r'VIN: ([^\n]+)', output)
-        if vin_matches:
-            vin_numbers = vin_matches
-
     with response_container:
         for i, (query, answer) in enumerate(st.session_state.chat_history):
-            # Display user message
             message(query, is_user=True, key=f"{i}_user", avatar_style="thumbs")
-
-            # Display AI response including images and VIN-related information
-            col1, col2 = st.columns([0.7, 10])  # Adjust the ratio based on your preference
+            col1, col2 = st.columns([0.7, 10]) 
             with col1:
                 st.image("icon-1024.png", width=50)
             with col2:
@@ -693,32 +678,32 @@ with container:
                     unsafe_allow_html=True
                 )
 
-                # Use regex to find image links
-                image_links = re.findall(r'(https?://\S+\.(?:png|jpg|jpeg|gif))', answer)
-                # Iterate through image links and VIN numbers
-                for vin_number, image_link in zip(vin_numbers, image_links):
-                    try:
-                        image_response = requests.get(image_link)
-                        image = Image.open(BytesIO(image_response.content))
+                # # Use regex to find image links
+                # image_links = re.findall(r'(https?://\S+\.(?:png|jpg|jpeg|gif))', answer)
+                # # Iterate through image links and VIN numbers
+                # for vin_number, image_link in zip(vin_numbers, image_links):
+                #     try:
+                #         image_response = requests.get(image_link)
+                #         image = Image.open(BytesIO(image_response.content))
                         
-                        # Resize the image to a smaller size
-                        width = 175
-                        height = 135
-                        resized_image = image.resize((width, height))
+                #         # Resize the image to a smaller size
+                #         width = 175
+                #         height = 135
+                #         resized_image = image.resize((width, height))
                         
-                        # Display the resized image with a hyperlink to the external link
-                        if vin_number and is_new_or_used_query:
-                            inventory_link = f"https://www.goschchevy.com/inventory/{vin_number}"  # Separate VIN number
-                            st.markdown(
-                                f'<a href="{inventory_link}" target="_blank">'
-                                f'<img src="{image_link}" width="175" height="135" caption="Image"></a>',
-                                unsafe_allow_html=True
-                            )
-                        else:
-                            st.image(resized_image, caption='2023 Chevrolet Silverado 1500', use_column_width=False)
+                #         # Display the resized image with a hyperlink to the external link
+                #         if vin_number and is_new_or_used_query:
+                #             inventory_link = f"https://www.goschchevy.com/inventory/{vin_number}"  # Separate VIN number
+                #             st.markdown(
+                #                 f'<a href="{inventory_link}" target="_blank">'
+                #                 f'<img src="{image_link}" width="175" height="135" caption="Image"></a>',
+                #                 unsafe_allow_html=True
+                #             )
+                #         else:
+                #             st.image(resized_image, caption='2023 Chevrolet Silverado 1500', use_column_width=False)
                         
-                    except Exception as e:
-                        st.warning(f"Error displaying image: {e}")
+                #     except Exception as e:
+                #         st.warning(f"Error displaying image: {e}")
 
 
 

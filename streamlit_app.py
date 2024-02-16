@@ -634,19 +634,23 @@ def conversational_chat(user_input, user_name):
     st.session_state.chat_history.append((user_input, output))
     
     return output
-def convert_markdown_links_to_html_images(text):
-    print("convert_markdown_links_to_html_images",text)
-    # Regular expression to match markdown image format ![alt text](URL)
-    pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+def convert_links(text):
+    # Regular expression to match markdown format ![alt text](URL) or [link text](URL)
+    pattern = r'!?\[([^\]]+)\]\(([^)]+)\)'
 
-    # Function to replace each match with an HTML img element
-    def replace_with_img(match):
-        alt_text = match.group(1)
+    # Function to replace each match
+    def replace_with_tag(match):
+        prefix = match.group(0)[0]  # Check if it's an image or a link
+        alt_or_text = match.group(1)
         url = match.group(2)
-        return f'<a href="{url}"><img src="{url}" alt="{alt_text}" style="width: 100px; height: auto;"/></a>'
+        # Check for common image file extensions
+        if prefix == "!" and any(url.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif']):
+            return f'<a href="{url}"><img src="{url}" alt="{alt_or_text}" style="width: 100px; height: auto;"/></a>'
+        else:
+            return f'<a href="{url}">{alt_or_text}</a>'
 
-    # Replace all occurrences of markdown image links with HTML img tags
-    html_text = re.sub(pattern, replace_with_img, text)
+    # Replace all occurrences
+    html_text = re.sub(pattern, replace_with_tag, text)
     return html_text
     
 output = ""
@@ -674,7 +678,7 @@ with container:
                     f'<div style="background-color: black; color: white; border-radius: 10px; padding: 10px; width: 85%;'
                     f' border-top-right-radius: 10px; border-bottom-right-radius: 10px;'
                     f' border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 2px 2px 5px #888888;">'
-                    f'<span style="font-family: Arial, sans-serif; font-size: 16px; white-space: pre-wrap;">{convert_markdown_links_to_html_images(answer)}</span>'
+                    f'<span style="font-family: Arial, sans-serif; font-size: 16px; white-space: pre-wrap;">{convert_links(answer)}</span>'
                     f'</div>',
                     unsafe_allow_html=True
                 )

@@ -634,9 +634,23 @@ def conversational_chat(user_input, user_name):
     st.session_state.chat_history.append((user_input, output))
     
     return output
+def convert_markdown_links_to_html_images(text):
+    # Regular expression to match markdown image format ![alt text](URL)
+    pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+
+    # Function to replace each match with an HTML img element
+    def replace_with_img(match):
+        alt_text = match.group(1)
+        url = match.group(2)
+        return f'<img src="{url}" alt="{alt_text}">'
+
+    # Replace all occurrences of markdown image links with HTML img tags
+    html_text = re.sub(pattern, replace_with_img, text)
+    return html_text
+    
 output = ""
-vin_numbers = [] 
-is_new_or_used_query = False  
+vin_numbers = []  # List to store VINs for each car option
+is_new_or_used_query = False  # Flag to identify if the user queried about new or used cars
 
 with container:
     if st.session_state.user_name is None:
@@ -651,50 +665,50 @@ with container:
         output = conversational_chat(user_input, st.session_state.user_name)
         print("output of conversational chat", output)
 
-        
+        # Check if the user's query is related to new or used cars
         is_new_or_used_query = any(keyword in user_input.lower() for keyword in ["new", "used"])
 
-        
+        # Extract VIN numbers from the current response
         vin_matches = re.findall(r'VIN: ([^\n]+)', output)
         if vin_matches:
             vin_numbers = vin_matches
 
     with response_container:
         for i, (query, answer) in enumerate(st.session_state.chat_history):
-           
+            # Display user message
             message(query, is_user=True, key=f"{i}_user", avatar_style="thumbs")
 
-           
-            col1, col2 = st.columns([0.7, 10])  
+            # Display AI response including images and VIN-related information
+            col1, col2 = st.columns([0.7, 10])  # Adjust the ratio based on your preference
             with col1:
                 st.image("icon-1024.png", width=50)
             with col2:
-               
+                # Display AI response text only once
                 st.markdown(
                     f'<div style="background-color: black; color: white; border-radius: 10px; padding: 10px; width: 85%;'
                     f' border-top-right-radius: 10px; border-bottom-right-radius: 10px;'
                     f' border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 2px 2px 5px #888888;">'
-                    f'<span style="font-family: Arial, sans-serif; font-size: 16px; white-space: pre-wrap;">{answer}</span>'
+                    f'<span style="font-family: Arial, sans-serif; font-size: 16px; white-space: pre-wrap;">{convert_markdown_links_to_html_images(answer)}</span>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
 
-               
+                # Use regex to find image links
                 image_links = re.findall(r'(https?://\S+\.(?:png|jpg|jpeg|gif))', answer)
-               
+                # Iterate through image links and VIN numbers
                 for vin_number, image_link in zip(vin_numbers, image_links):
                     try:
                         image_response = requests.get(image_link)
                         image = Image.open(BytesIO(image_response.content))
                         
-                        
-                        width = 50
-                        height = 40
+                        # Resize the image to a smaller size
+                        width = 175
+                        height = 135
                         resized_image = image.resize((width, height))
                         
-                        
+                        # Display the resized image with a hyperlink to the external link
                         if vin_number and is_new_or_used_query:
-                            inventory_link = f"https://www.goschchevy.com/inventory/{vin_number}" 
+                            inventory_link = f"https://www.goschchevy.com/inventory/{vin_number}"  # Separate VIN number
                             st.markdown(
                                 f'<a href="{inventory_link}" target="_blank">'
                                 f'<img src="{image_link}" width="175" height="135" caption="Image"></a>',
@@ -706,11 +720,6 @@ with container:
                     except Exception as e:
                         st.warning(f"Error displaying image: {e}")
 
-        # if st.session_state.user_name:
-        #     try:
-        #         save_chat_to_airtable(st.session_state.user_name, user_input, output)
-        #     except Exception as e:
-        #         st.error(f"An error occurred: {e}")
 
 
  
